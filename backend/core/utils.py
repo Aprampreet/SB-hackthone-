@@ -202,15 +202,50 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
 
 def apply_filter_to_video(input_relative_path: str, filter_name: str) -> str:
     filter_map = {
-        'grayscale': 'format=gray',
-        'sepia': 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
-        'vignette': 'vignette',
-        'vintage': 'curves=r=\'0/0.11:0.25/0.24:0.5/0.51:1/0.92\':g=\'0/0.09:0.25/0.23:0.5/0.48:1/0.93\':b=\'0/0.12:0.25/0.20:0.5/0.52:1/0.90\'',
-        'sharpen': 'unsharp=5:5:1.0:5:5:0.0',
-        'warm': 'eq=contrast=1.1:saturation=1.2:gamma=1.1',
-        'grain': 'noise=alls=7:allf=t+u',
-        'technicolor': 'colorchannelmixer=.59:.32:.14:0:.30:.60:.12:0:.22:.34:.72'
-    }
+    'grayscale': 'hue=s=0',
+    'sepia': 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
+    'vignette': 'vignette=PI/4',
+    'vintage': (
+        "curves=r='0/0.2:0.5/0.6:1/0.9':"
+        "g='0/0.1:0.5/0.5:1/0.8':"
+        "b='0/0.3:0.5/0.4:1/0.7'"
+    ),
+    'sharpen': 'unsharp=7:7:2.0:7:7:0.0',
+    'warm': 'eq=brightness=0.05:contrast=1.1:saturation=1.4',
+    'grain': 'noise=alls=20:allf=t+u',
+    'my filter':'eq=contrast=1.2:brightness=0.05, gblur=sigma=10, vignette=angle=PI/4',
+    'rainbowglow': 'hue=s=2, curves=preset=strong_contrast, eq=saturation=2.0:brightness=0.05, colorchannelmixer=.9:0:0:0:0:.9:0:0:0:0:.9, gblur=sigma=2',
+    'weddingfilm': (
+        "eq=contrast=1.05:saturation=1.4:brightness=0.05:gamma=1.1,"
+        "boxblur=2:1,"
+        "colorbalance=rs=.3:gs=-.1:bs=-.2,"
+        "fade=in:0:30,"
+        "format=yuv420p"
+    ),
+    'lightning': (
+        "split[base][flash];"
+        "[flash]lutyuv=y=val*5,fade=in:0:5:alpha=1,fade=out:5:5:alpha=1[light];"
+        "[base][light]overlay"
+    ),
+   'y2k_camcorder_look': (
+    "curves=preset=cross_process,"
+    "unsharp=5:5:1.0:5:5:0.0,"
+    "drawtext="
+    "text='JUL 23 2005':"
+    "x=w-tw-20:y=h-th-20:"
+    "fontcolor=white@0.8:"
+    "fontsize=40:"
+    "box=1:boxcolor=black@0.4"
+),
+'dreamy_bloom': (
+    "eq=brightness=0.08:contrast=0.9,"
+    "unsharp=7:7:-1.5:7:7:-1.5,"
+    "vignette=angle=1.2"
+)
+
+
+}
+
 
     if filter_name not in filter_map:
         raise ValueError(f"Invalid filter: {filter_name}")
@@ -221,8 +256,23 @@ def apply_filter_to_video(input_relative_path: str, filter_name: str) -> str:
 
     original_filename, ext = os.path.splitext(os.path.basename(full_input_path))
 
+
+
     if "_filter_" in original_filename:
         original_filename = original_filename.split("_filter_")[0]
+        original_file_path = os.path.join(output_dir, f"{original_filename}{ext}")
+        full_input_path = original_file_path
+    else:
+        original_file_path = full_input_path
+
+
+    for fname in os.listdir(output_dir):
+        if fname.startswith(original_filename + "_filter_"):
+            try:
+                os.remove(os.path.join(output_dir, fname))
+            except Exception as e:
+                print("Failed to delete previous filtered file:", e)
+
 
     output_filename = f"{original_filename}_filter_{filter_name}{ext}"
     full_output_path = os.path.join(output_dir, output_filename)

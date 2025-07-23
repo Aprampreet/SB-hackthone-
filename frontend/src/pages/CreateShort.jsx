@@ -9,7 +9,7 @@ export default function CreateShort() {
   const [error, setError] = useState(null) 
   const [successMessage, setSuccessMessage] = useState(null)
   const [filterLoading, setFilterLoading] = useState(false);
-  const availableFilters = ["grayscale", "sepia", "vignette",'vintage','sharpen','warm','grain','technicolor'];
+  const availableFilters = ["grayscale", "sepia", "vignette",'vintage','sharpen','warm','grain','my filter','rainbowglow','weddingfilm','lightning','y2k_camcorder_look','dreamy_bloom'];
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -134,7 +134,6 @@ export default function CreateShort() {
                     disabled={filterLoading || loading}
                     className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
                   >
-                    {/* Capitalize first letter */}
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </button>
                 ))}
