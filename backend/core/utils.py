@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import whisper
 import uuid
+import re
+
 
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
@@ -197,100 +199,65 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
 
     return os.path.join("shorts", output_filename)"""
 
-
-# In utls.py
-
-def apply_filter_to_video(input_relative_path: str, filter_name: str) -> str:
-    filter_map = {
+FILTERS = {
     'grayscale': 'hue=s=0',
     'sepia': 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
     'vignette': 'vignette=PI/4',
-    'vintage': (
-        "curves=r='0/0.2:0.5/0.6:1/0.9':"
-        "g='0/0.1:0.5/0.5:1/0.8':"
-        "b='0/0.3:0.5/0.4:1/0.7'"
-    ),
+    'vintage': "curves=r='0/0.2:0.5/0.6:1/0.9':g='0/0.1:0.5/0.5:1/0.8':b='0/0.3:0.5/0.4:1/0.7'",
     'sharpen': 'unsharp=7:7:2.0:7:7:0.0',
     'warm': 'eq=brightness=0.05:contrast=1.1:saturation=1.4',
     'grain': 'noise=alls=20:allf=t+u',
-    'my filter':'eq=contrast=1.2:brightness=0.05, gblur=sigma=10, vignette=angle=PI/4',
+    'my filter': 'eq=contrast=1.2:brightness=0.05, gblur=sigma=10, vignette=angle=PI/4',
     'rainbowglow': 'hue=s=2, curves=preset=strong_contrast, eq=saturation=2.0:brightness=0.05, colorchannelmixer=.9:0:0:0:0:.9:0:0:0:0:.9, gblur=sigma=2',
-    'weddingfilm': (
-        "eq=contrast=1.05:saturation=1.4:brightness=0.05:gamma=1.1,"
-        "boxblur=2:1,"
-        "colorbalance=rs=.3:gs=-.1:bs=-.2,"
-        "fade=in:0:30,"
-        "format=yuv420p"
-    ),
-    'lightning': (
-        "split[base][flash];"
-        "[flash]lutyuv=y=val*5,fade=in:0:5:alpha=1,fade=out:5:5:alpha=1[light];"
-        "[base][light]overlay"
-    ),
-   'y2k_camcorder_look': (
-    "curves=preset=cross_process,"
-    "unsharp=5:5:1.0:5:5:0.0,"
-    "drawtext="
-    "text='JUL 23 2005':"
-    "x=w-tw-20:y=h-th-20:"
-    "fontcolor=white@0.8:"
-    "fontsize=40:"
-    "box=1:boxcolor=black@0.4"
-),
-'dreamy_bloom': (
-    "eq=brightness=0.08:contrast=0.9,"
-    "unsharp=7:7:-1.5:7:7:-1.5,"
-    "vignette=angle=1.2"
-)
-
-
+    'weddingfilm': "eq=contrast=1.05:saturation=1.4:brightness=0.05:gamma=1.1,boxblur=2:1,colorbalance=rs=.3:gs=-.1:bs=-.2,fade=in:0:30,format=yuv420p",
+    'lightning': "split[base][flash];[flash]lutyuv=y=val*5,fade=in:0:5:alpha=1,fade=out:5:5:alpha=1[light];[base][light]overlay",
+    'y2k_camcorder_look': "curves=preset=cross_process,unsharp=5:5:1.0:5:5:0.0,drawtext=text='JUL 23 2005':x=w-tw-20:y=h-th-20:fontcolor=white@0.8:fontsize=40:box=1:boxcolor=black@0.4",
+    'dreamy_bloom': "eq=brightness=0.08:contrast=0.9,unsharp=7:7:-1.5:7:7:-1.5,vignette=angle=1.2",
 }
 
-
-    if filter_name not in filter_map:
+def apply_filter_to_video(input_relative_path: str, filter_name: str) -> str:
+    if filter_name not in FILTERS:
         raise ValueError(f"Invalid filter: {filter_name}")
 
-    full_input_path = os.path.join(settings.MEDIA_ROOT, input_relative_path)
+    root = settings.MEDIA_ROOT
+    in_path = os.path.join(root, input_relative_path)
+    if not os.path.exists(in_path):
+        raise FileNotFoundError(f"Input file not found: {in_path}")
 
-    output_dir = os.path.dirname(full_input_path)
+    d = os.path.dirname(in_path)
+    stem, ext = os.path.splitext(os.path.basename(in_path))
+    base_stem = re.sub(r'_filter_.*$', '', stem)
 
-    original_filename, ext = os.path.splitext(os.path.basename(full_input_path))
-
-
-
-    if "_filter_" in original_filename:
-        original_filename = original_filename.split("_filter_")[0]
-        original_file_path = os.path.join(output_dir, f"{original_filename}{ext}")
-        full_input_path = original_file_path
-    else:
-        original_file_path = full_input_path
-
-
-    for fname in os.listdir(output_dir):
-        if fname.startswith(original_filename + "_filter_"):
-            try:
-                os.remove(os.path.join(output_dir, fname))
-            except Exception as e:
-                print("Failed to delete previous filtered file:", e)
-
-
-    output_filename = f"{original_filename}_filter_{filter_name}{ext}"
-    full_output_path = os.path.join(output_dir, output_filename)
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i", full_input_path,
-        "-vf", filter_map[filter_name],
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-        "-c:a", "copy",
-        full_output_path
+    candidates = [
+        os.path.join(d, f"{base_stem}{ext}"),
+        os.path.join(root, "temp", f"{base_stem}{ext}")
     ]
+    base_path = next((p for p in candidates if os.path.exists(p)), in_path if stem == base_stem else None)
+    if not base_path:
+        raise FileNotFoundError(f"Could not find base video for '{in_path}'")
 
-    
-    subprocess.run(cmd, check=True, capture_output=True)
-    
+    out_dir = os.path.dirname(base_path)
+    out_path = os.path.join(out_dir, f"{base_stem}_filter_{filter_name}{ext}")
+    if os.path.exists(out_path):  
+        return os.path.relpath(out_path, root).replace("\\", "/")
+    try:
+        for f in os.listdir(out_dir):
+            if f.startswith(base_stem + "_filter_"):
+                try: os.remove(os.path.join(out_dir, f))
+                except: pass
+    except FileNotFoundError:
+        os.makedirs(out_dir, exist_ok=True)
 
-    return os.path.join("shorts", output_filename)
+    graph = FILTERS[filter_name]
+    flt_flag = ["-filter_complex", graph] if (';' in graph or ('[' in graph and ']' in graph)) else ["-vf", graph]
+
+    cmd = ["ffmpeg", "-y", "-i", base_path, *flt_flag, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", out_path]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"FFmpeg failed for filter '{filter_name}': {e.stderr.decode(errors='ignore')}") from e
+
+    return os.path.relpath(out_path, root).replace("\\", "/")
+
+
