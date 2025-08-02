@@ -1,6 +1,6 @@
 
 import { useState } from "react" 
-import { convertYouTubeToShort ,applyFilter } from "../components/api" 
+import { convertYouTubeToShort ,applyFilter ,applySubtitles} from "../components/api" 
 
 export default function CreateShort() {
   const [videoURL, setVideoURL] = useState("")
@@ -9,6 +9,9 @@ export default function CreateShort() {
   const [error, setError] = useState(null) 
   const [successMessage, setSuccessMessage] = useState(null)
   const [filterLoading, setFilterLoading] = useState(false);
+
+  const [subtitlesLoading, setSubtitlesLoading] = useState(false);
+
   const availableFilters = ["grayscale", "sepia", "vignette",'vintage','sharpen','warm','grain','my filter','rainbowglow','weddingfilm','lightning','y2k_camcorder_look','dreamy_bloom'];
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,6 +49,21 @@ export default function CreateShort() {
     }
 
   }
+    const handleApplySubtitles = async () => {
+      if (!shortData) return;
+      setSubtitlesLoading(true);
+      setError(null);
+      try {
+        const updatedVideoData = await applySubtitles(shortData.id);
+        setShortData(updatedVideoData);
+      } catch (err) {
+        console.error("Subtitles failed:", err);
+        setError(err.message || "Failed to apply subtitles.");
+      } finally {
+        setSubtitlesLoading(false);
+      }
+    };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 flex items-center justify-center p-4">
@@ -144,6 +162,16 @@ export default function CreateShort() {
                 </p>
               )}
             </div>
+            <div className="mt-6 text-center">
+            <button
+              onClick={handleApplySubtitles}
+              disabled={subtitlesLoading || loading}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
+            >
+              {subtitlesLoading ? "Applying Subtitles..." : "Add Subtitles"}
+            </button>
+          </div>
+
 
             {shortData.short_video_file && (
               <div className="mt-6 text-center">

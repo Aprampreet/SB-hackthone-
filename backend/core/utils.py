@@ -113,7 +113,7 @@ def trim_video(input_path: str, yt_id: str, db_id: int, duration: int = 30):
     return os.path.join("shorts", output_name)
 
 
-
+""""
 def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
     import uuid
 
@@ -165,10 +165,9 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
         raise e
 
     return os.path.join("shorts", final_output_name)
+"""
 
-
-#for vertically stretched viedo 
-"""def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int) -> str:
+def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int) -> str:
     output_dir = _ensure_dir(os.path.join(settings.MEDIA_ROOT, "shorts"))
     output_filename = f"short_{yt_id}_{db_id}.mp4"
     final_output_path = os.path.join(output_dir, output_filename)
@@ -197,7 +196,7 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
         print("FFmpeg resize error:\n", e.stderr.decode())
         raise e
 
-    return os.path.join("shorts", output_filename)"""
+    return os.path.join("shorts", output_filename)
 
 FILTERS = {
     'grayscale': 'hue=s=0',
@@ -261,3 +260,82 @@ def apply_filter_to_video(input_relative_path: str, filter_name: str) -> str:
     return os.path.relpath(out_path, root).replace("\\", "/")
 
 
+
+def generate_srt_subtitles(input_relative_path: str) -> str:
+    root = settings.MEDIA_ROOT
+    input_path = os.path.join(root, input_relative_path)
+    
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Video not found: {input_path}")
+
+    model = whisper.load_model("base")
+    
+    result = model.transcribe(input_path)
+    
+    
+
+    base, ext = os.path.splitext(input_path)
+    srt_path = base + ".srt"
+
+    with open(srt_path, "w", encoding="utf-8") as f:
+        for i, segment in enumerate(result["segments"]):
+            start = segment["start"]
+            end = segment["end"]
+            text = segment["text"].strip()
+
+            def format_time(t):
+                hrs, rem = divmod(t, 3600)
+                mins, secs = divmod(rem, 60)
+                millis = int((secs - int(secs)) * 1000)
+                return f"{int(hrs):02}:{int(mins):02}:{int(secs):02},{millis:03}"
+            
+            f.write(f"{i+1}\n")
+            f.write(f"{format_time(start)} --> {format_time(end)}\n")
+            f.write(f"{text}\n\n")
+
+    if not os.path.exists(srt_path):
+        raise RuntimeError("Failed to create subtitle file")
+
+    return os.path.relpath(srt_path, root)
+
+
+def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str):
+    root = settings.MEDIA_ROOT
+    input_path = os.path.join(root,input_relative_path)
+    srt_path = os.path.join(root, srt_relative_path)
+
+    
+
+    if not os.path.exists(srt_path):
+        raise FileNotFoundError(f"SRT subtitle file not found: {srt_path}")
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Input video not found: {input_path}")
+    base_name, ext = os.path.splitext(os.path.basename(input_path))
+    output_filename = f"{base_name}_subtitled{ext}"
+    output_path = os.path.join(os.path.dirname(input_path), output_filename)
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", input_path,
+        "-vf", f"subtitles='{srt_path}'",
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "copy",
+        output_path
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    
+    return os.path.relpath(output_path, root).replace("\\", "/")
+
+
+
+def add_subtitles_to_video(input_relative_path: str) -> str:
+    root = settings.MEDIA_ROOT
+    srt_path = generate_srt_subtitles(input_relative_path)
+
+    subtitled_video_path = burn_subtitles_to_video(input_relative_path, srt_path)
+    os.remove(os.path.join(root, srt_path))
+
+    return subtitled_video_path

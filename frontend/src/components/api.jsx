@@ -49,6 +49,11 @@ export const applyFilter = async (videoId, filterName) => {
   return res.data;
 }
 
+export const applySubtitles = async (videoId) =>{
+  const res = await axiosInstance.post(`core/videos/${videoId}/apply-subtitles`);
+  return res.data;
+}
+
 export default axiosInstance
 
 

@@ -1,7 +1,7 @@
 from ninja import Router
 from .models import YouTubeVideo
 from .schema import VideoIn, VideoOut,FilterIn
-from .utils import download_youtube_video, trim_video,resizing_trimmed_video,apply_filter_to_video
+from .utils import download_youtube_video, trim_video,resizing_trimmed_video,apply_filter_to_video,add_subtitles_to_video
 from accounts.AuthBar import JWTAuth
 from ninja.errors import HttpError
 core_router = Router(auth=JWTAuth())
@@ -73,3 +73,28 @@ def filter_video(request, video_id: int, data: FilterIn):
         created_at=video.created_at,
         updated_at=video.updated_at,
     )
+
+@core_router.post('/videos/{video_id}/apply-subtitles',response=VideoOut)
+def subtitles(request,video_id:int ):
+    try:
+        video = YouTubeVideo.objects.get(id=video_id, user=request.user)
+    except YouTubeVideo.DoesNotExist:
+        raise HttpError("Video not found.")
+    
+    if not video.short_video_file:
+        raise HttpError("Cannot apply filter: Original short video does not exist.")
+    
+    new_subtitle_video = add_subtitles_to_video(input_relative_path=video.short_video_file.name)
+    video.short_video_file = new_subtitle_video
+    video.save()
+    
+    return VideoOut(
+        id=video.id,
+        youtube_url=str(video.youtube_url),
+        title=video.title,
+        short_video_file=request.build_absolute_uri(video.short_video_file.url) if video.short_video_file else None,
+        created_at=video.created_at,
+        updated_at=video.updated_at,
+    )
+
+    
