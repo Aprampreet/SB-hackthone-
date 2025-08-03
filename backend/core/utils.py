@@ -299,7 +299,42 @@ def generate_srt_subtitles(input_relative_path: str) -> str:
     return os.path.relpath(srt_path, root)
 
 
-def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str):
+def style_subtitles_to_ass_file(subtitles, output_path="subs.ass", font="Impact", fontsize=80, color="&H00FF0000"):
+   
+    def seconds_to_ass_time(seconds):
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        cs = int((seconds - int(seconds)) * 100)
+        return f"{h}:{m:02}:{s:02}.{cs:02}"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("[Script Info]\n")
+        f.write("Title: Styled Subs\n")
+        f.write("ScriptType: v4.00+\n")
+        f.write("PlayResX: 1080\n")
+        f.write("PlayResY: 1920\n\n")
+
+        f.write("[V4+ Styles]\n")
+        f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
+                "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
+                "MarginR, MarginV, Encoding\n")
+        f.write(f"Style: Default,{font},{fontsize},{color},&H000000FF,&H00000000,&H64000000,1,0,0,0,100,100,0,0,1,3,1,2,30,30,30,1\n\n")
+
+        f.write("[Events]\n")
+        f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+        for sub in subtitles:
+            start = seconds_to_ass_time(sub["start"])
+            end = seconds_to_ass_time(sub["end"])
+            text = sub["text"].replace(",", "\\,")
+            f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
+
+    print("✅ Styled .ass subtitle file saved at:", output_path)
+
+
+
+
+def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str,ass_file:str):
     root = settings.MEDIA_ROOT
     input_path = os.path.join(root,input_relative_path)
     srt_path = os.path.join(root, srt_relative_path)
@@ -318,7 +353,7 @@ def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str):
         "ffmpeg",
         "-y",
         "-i", input_path,
-        "-vf", f"subtitles='{srt_path}'",
+        "-vf", f"ass='{ass_file}'",
         "-c:v", "libx264",
         "-preset", "fast",
         "-crf", "23",
@@ -333,9 +368,16 @@ def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str):
 
 def add_subtitles_to_video(input_relative_path: str) -> str:
     root = settings.MEDIA_ROOT
-    srt_path = generate_srt_subtitles(input_relative_path)
+    input_path = os.path.join(root, input_relative_path)
 
-    subtitled_video_path = burn_subtitles_to_video(input_relative_path, srt_path)
-    os.remove(os.path.join(root, srt_path))
+    model = whisper.load_model("base")
+    result = model.transcribe(input_path)
+    subtitles = result["segments"]
+
+    ass_path = os.path.splitext(input_path)[0] + ".ass"
+    style_subtitles_to_ass_file(subtitles=subtitles, output_path=ass_path)
+
+    subtitled_video_path = burn_subtitles_to_video(input_relative_path, "", ass_file=ass_path)
+    os.remove(ass_path)
 
     return subtitled_video_path
