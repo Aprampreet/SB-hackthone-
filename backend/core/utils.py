@@ -299,7 +299,12 @@ def generate_srt_subtitles(input_relative_path: str) -> str:
     return os.path.relpath(srt_path, root)
 
 
-def style_subtitles_to_ass_file(subtitles, output_path="subs.ass", font="Impact", fontsize=80, color="&H00FF0000"):
+def style_subtitles_to_ass_file(subtitles, 
+    output_path="subs.ass", 
+    font="Impact", 
+    fontsize=80, 
+    bold=1, 
+    color="&H00FF0000"):
    
     def seconds_to_ass_time(seconds):
         h = int(seconds // 3600)
@@ -319,7 +324,7 @@ def style_subtitles_to_ass_file(subtitles, output_path="subs.ass", font="Impact"
         f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
                 "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
                 "MarginR, MarginV, Encoding\n")
-        f.write(f"Style: Default,{font},{fontsize},{color},&H000000FF,&H00000000,&H64000000,1,0,0,0,100,100,0,0,1,3,1,2,30,30,30,1\n\n")
+        f.write(f"Style: Default,{font},{fontsize},{color},&H000000FF,&H00000000,&H64000000,{bold},0,0,0,100,100,0,0,1,3,1,2,30,30,30,1\n\n")
 
         f.write("[Events]\n")
         f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
@@ -330,6 +335,7 @@ def style_subtitles_to_ass_file(subtitles, output_path="subs.ass", font="Impact"
             f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
     print("✅ Styled .ass subtitle file saved at:", output_path)
+
 
 
 
@@ -366,7 +372,10 @@ def burn_subtitles_to_video(input_relative_path:str,srt_relative_path:str,ass_fi
 
 
 
-def add_subtitles_to_video(input_relative_path: str) -> str:
+def add_subtitles_to_video(input_relative_path: str ,font: str = "Impact",
+    fontsize: int = 80,
+    bold: int = 1,
+    color: str = "&H00FF0000") -> str:
     root = settings.MEDIA_ROOT
     input_path = os.path.join(root, input_relative_path)
 
@@ -375,7 +384,12 @@ def add_subtitles_to_video(input_relative_path: str) -> str:
     subtitles = result["segments"]
 
     ass_path = os.path.splitext(input_path)[0] + ".ass"
-    style_subtitles_to_ass_file(subtitles=subtitles, output_path=ass_path)
+    style_subtitles_to_ass_file(subtitles=subtitles,
+        output_path=ass_path,
+        font=font,
+        fontsize=fontsize,
+        bold=bold,
+        color=color,)
 
     subtitled_video_path = burn_subtitles_to_video(input_relative_path, "", ass_file=ass_path)
     os.remove(ass_path)

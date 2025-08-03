@@ -1,6 +1,6 @@
 from ninja import Router
 from .models import YouTubeVideo
-from .schema import VideoIn, VideoOut,FilterIn
+from .schema import VideoIn, VideoOut,FilterIn,SubtitleStyle
 from .utils import download_youtube_video, trim_video,resizing_trimmed_video,apply_filter_to_video,add_subtitles_to_video
 from accounts.AuthBar import JWTAuth
 from ninja.errors import HttpError
@@ -75,7 +75,7 @@ def filter_video(request, video_id: int, data: FilterIn):
     )
 
 @core_router.post('/videos/{video_id}/apply-subtitles',response=VideoOut)
-def subtitles(request,video_id:int ):
+def subtitles(request,video_id:int , body: SubtitleStyle):
     try:
         video = YouTubeVideo.objects.get(id=video_id, user=request.user)
     except YouTubeVideo.DoesNotExist:
@@ -84,7 +84,25 @@ def subtitles(request,video_id:int ):
     if not video.short_video_file:
         raise HttpError("Cannot apply filter: Original short video does not exist.")
     
-    new_subtitle_video = add_subtitles_to_video(input_relative_path=video.short_video_file.name)
+    color = body.color  
+    def hex_to_ass_color(hex_color: str) -> str:
+        hex_color = hex_color.lstrip('#')
+        bbggrr = hex_color[4:6]+hex_color[2:4]+hex_color[0:2]  
+        return f'&H00{bbggrr.upper()}'
+
+    ass_color = hex_to_ass_color(body.color)
+    ass_bold = 1 if (body.bold and int(body.bold) >= 700) else 0
+    ass_font = body.font
+    ass_size = body.fontsize
+    input_video_path = video.original_short_video_file.name if hasattr(video, 'original_short_video_file') else video.short_video_file.name
+
+    new_subtitle_video = add_subtitles_to_video(
+        input_relative_path=video.short_video_file.name,
+        font=ass_font,
+        fontsize=ass_size,
+        bold=ass_bold,
+        color=ass_color,
+    )
     video.short_video_file = new_subtitle_video
     video.save()
     

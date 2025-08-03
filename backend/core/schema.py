@@ -17,3 +17,9 @@ class VideoOut(BaseModel):
 
 class FilterIn(BaseModel):
     filter_name: str
+
+class SubtitleStyle(BaseModel):
+    font: str = "Impact"
+    fontsize: int = 80
+    bold: int = 400
+    color: str = "#FF0000"
