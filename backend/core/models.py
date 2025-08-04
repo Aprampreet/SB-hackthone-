@@ -7,7 +7,7 @@ class YouTubeVideo(models.Model):
     youtube_url = models.URLField(max_length=255)
     title = models.CharField(max_length=255, blank=True, null=True)
     short_video_file = models.FileField(upload_to='shorts/', blank=True, null=True)
-    original_short_video_file = models.FileField(upload_to='shorts/originals/', null=True, blank=True)  # clean original video
+    original_short_video_file = models.FileField(upload_to='shorts/originals/', null=True, blank=True)  
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
