@@ -200,7 +200,7 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int) -> str:
 FILTERS = {
     'grayscale': 'hue=s=0',
     'sepia': 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
-    'vignette': 'vignette=PI/4',
+    'vignette': 'vignette',
     'vintage': "curves=r='0/0.2:0.5/0.6:1/0.9':g='0/0.1:0.5/0.5:1/0.8':b='0/0.3:0.5/0.4:1/0.7'",
     'sharpen': 'unsharp=7:7:2.0:7:7:0.0',
     'warm': 'eq=brightness=0.05:contrast=1.1:saturation=1.4',
@@ -333,7 +333,7 @@ def style_subtitles_to_ass_file(subtitles,
             text = sub["text"].replace(",", "\\,")
             f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
-    print("✅ Styled .ass subtitle file saved at:", output_path)
+    print(" Styled .ass subtitle file saved at:", output_path)
 
 
 
