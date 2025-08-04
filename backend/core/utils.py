@@ -113,7 +113,6 @@ def trim_video(input_path: str, yt_id: str, db_id: int, duration: int = 30):
     return os.path.join("shorts", output_name)
 
 
-""""
 def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int):
     import uuid
 
@@ -197,7 +196,7 @@ def resizing_trimmed_video(input_path: str, yt_id: str, db_id: int) -> str:
         raise e
 
     return os.path.join("shorts", output_filename)
-
+"""
 FILTERS = {
     'grayscale': 'hue=s=0',
     'sepia': 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131',
@@ -389,7 +388,7 @@ def add_subtitles_to_video(input_relative_path: str ,font: str = "Impact",
         font=font,
         fontsize=fontsize,
         bold=bold,
-        color=color,)
+        color=color)
 
     subtitled_video_path = burn_subtitles_to_video(input_relative_path, "", ass_file=ass_path)
     os.remove(ass_path)
