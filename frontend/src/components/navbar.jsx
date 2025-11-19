@@ -13,20 +13,18 @@ const Navbar = () => {
     localStorage.removeItem("refresh_token")
     localStorage.removeItem("user")
     navigate("/login")
-    setIsSidebarOpen(false) // Close sidebar on logout
+    setIsSidebarOpen(false) 
   }
 
   const closeSidebar = () => setIsSidebarOpen(false)
 
   return (
     <>
-      {/* Main Navbar */}
       <nav className="bg-gray-800 text-white px-4 py-3 flex justify-between items-center shadow-md">
         <Link to="/" className="text-xl font-bold">
           MyApp
         </Link>
 
-        {/* Desktop Navigation */}
         <div className="hidden md:flex gap-6 items-center">
           <Link to="/" className="hover:text-gray-300 transition-colors">
             Home

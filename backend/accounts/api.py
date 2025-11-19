@@ -1,9 +1,7 @@
 from ninja import Router
-from ninja.security import HttpBearer
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from pydantic import BaseModel
 from ninja.errors import HttpError
 
